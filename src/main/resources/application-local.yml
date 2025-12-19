@@ -1,0 +1,58 @@
+server:
+  port: 8083
+
+health:
+  message: "Hello from product-service in LOCAL!"
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/product_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: root
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+    data:
+      redis:
+        host: localhost
+        port: 6379
+
+  cloud:
+    function:
+      definition: orderCreated;stockFailed
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9092
+      bindings:
+        # 주문 생성 이벤트 구독
+        orderCreated-in-0:
+          destination: order-created
+          group: order-service
+
+        # 재고 부족 시 이벤트 발행
+        stockFailed-out-0:
+          destination: stock-failed
+
+    kubernetes:
+      config:
+        enabled: false
+      discovery:
+        enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics,prometheus"
+  metrics:
+    tags:
+      application: order-service
