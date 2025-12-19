@@ -27,7 +27,7 @@ spring:
 
   cloud:
     function:
-      definition: orderCreated;stockFailed
+      definition: orderCreated;
     stream:
       kafka:
         binder:
@@ -36,7 +36,7 @@ spring:
         # 주문 생성 이벤트 구독
         orderCreated-in-0:
           destination: order-created
-          group: order-service
+          group: product-service
 
         # 재고 부족 시 이벤트 발행
         stockFailed-out-0:
