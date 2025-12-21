@@ -27,7 +27,7 @@ spring:
 
   cloud:
     function:
-      definition: orderCreated;
+      definition: orderCreated;orderCancelled
     stream:
       kafka:
         binder:
@@ -38,9 +38,14 @@ spring:
           destination: order-created
           group: product-service
 
+        orderCancelled-in-0:
+          destination: order-cancelled
+          group: product-service
+
         # 재고 부족 시 이벤트 발행
         stockFailed-out-0:
           destination: stock-failed
+          content-type: application/json
 
     kubernetes:
       config:
@@ -56,3 +61,13 @@ management:
   metrics:
     tags:
       application: order-service
+
+logging:
+  level:
+    com.benecia: INFO
+    root: INFO
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
+    org.springframework.cloud.stream: WARN
+    org.apache.kafka.common.utils.AppInfoParser: ERROR
+    org.apache.kafka.common.metrics: ERROR

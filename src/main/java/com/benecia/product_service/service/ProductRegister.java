@@ -37,4 +37,13 @@ public class ProductRegister {
 
         log.info("Stock decreased for {}. Remaining: {}", productId, product.getStock());
     }
+
+    @Transactional
+    public void increaseStock(String productId, int qty) {
+        ProductEntity product = productJpaRepository.findByProductId(productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND, "Product not found: " + productId));
+        product.increaseStock(qty);
+
+        log.info("Stock increased for {}. Remaining: {}", productId, product.getStock());
+    }
 }

@@ -1,8 +1,9 @@
 package com.benecia.product_service.service;
 
 import com.benecia.product_service.common.AppException;
-import com.benecia.product_service.dto.OrderCreated;
-import com.benecia.product_service.dto.StockFailed;
+import com.benecia.product_service.event.OrderCancelled;
+import com.benecia.product_service.event.OrderCreated;
+import com.benecia.product_service.event.StockFailed;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,15 +29,21 @@ public class OrderEventConsumer {
                 log.info("Stock decreased successfully for orderId: {}", orderDto.orderId());
             } catch(AppException e) {
                 log.error("Failed to decrease stock: {}", e.getMessage());
-
-                StockFailed failedDto = new StockFailed(
-                        orderDto.orderId(),
-                        orderDto.userId(),
-                        e.getMessage()
-                );
-
+                StockFailed failedDto = new StockFailed(orderDto.orderId(), orderDto.userId(), e.getMessage());
                 streamBridge.send("stockFailed-out-0", failedDto);
-                log.info("Published stock-failed event for orderId: {}", orderDto.orderId());
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<OrderCancelled> orderCancelled() {
+        return cancelledDto -> {
+            log.info("Received order-cancelled. Restoring stock for productId: {}", cancelledDto.productId());
+            try {
+                productRegister.increaseStock(cancelledDto.productId(), cancelledDto.qty());
+            } catch (Exception e) {
+                // 이미 롤백됐거나 상품이 없는 경우 등. 로그만 남김.
+                log.warn("Failed to restore stock (might be already handled): {}", e.getMessage());
             }
         };
     }
