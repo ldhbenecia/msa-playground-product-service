@@ -2,6 +2,7 @@ package com.benecia.product_service.service;
 
 import com.benecia.product_service.common.AppException;
 import com.benecia.product_service.common.ErrorCode;
+import com.benecia.product_service.dto.ProductResponse;
 import com.benecia.product_service.dto.RegisterProduct;
 import com.benecia.product_service.repository.ProductEntity;
 import com.benecia.product_service.repository.ProductJpaRepository;
@@ -18,15 +19,17 @@ public class ProductRegister {
     private final ProductJpaRepository productJpaRepository;
 
     @Transactional
-    public void register(RegisterProduct request) {
-        ProductEntity productEntity = new ProductEntity(
+    public ProductResponse register(RegisterProduct request) {
+        ProductEntity product = new ProductEntity(
                 request.productId(),
                 request.name(),
                 request.stock(),
                 request.unitPrice()
         );
 
-        productJpaRepository.save(productEntity);
+        productJpaRepository.save(product);
+
+        return ProductResponse.from(product);
     }
 
     @Transactional
