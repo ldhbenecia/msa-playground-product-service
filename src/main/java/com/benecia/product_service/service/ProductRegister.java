@@ -31,6 +31,11 @@ public class ProductRegister {
 
     @Transactional
     public void decreaseStock(String productId, int qty) {
+        if ("BOMB".equals(productId)) {
+            log.error("💣 Product Service: 으악! 폭탄이다! (DLQ 테스트)");
+            throw new RuntimeException("Product Service Error Triggered!");
+        }
+
         ProductEntity product = productJpaRepository.findByProductId(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND, "Product not found: " + productId));
         product.decreaseStock(qty);
