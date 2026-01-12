@@ -1,5 +1,6 @@
 package com.benecia.product_service.service;
 
+import com.benecia.product_service.dto.ProductResponse;
 import com.benecia.product_service.dto.RegisterProduct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -9,12 +10,13 @@ import org.springframework.stereotype.Service;
 public class ProductService {
 
     private final ProductRegister productRegister;
+    private final ProductReader productReader;
 
-    public void registerProduct(RegisterProduct request) {
-        productRegister.register(request);
+    public ProductResponse registerProduct(RegisterProduct request) {
+        return productRegister.register(request);
     }
 
-    public void decreaseStock(String productId, int qty) {
-        productRegister.decreaseStock(productId, qty);
+    public ProductResponse getProduct(String productId) {
+        return productReader.getProduct(productId);
     }
 }
