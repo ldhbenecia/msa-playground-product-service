@@ -49,6 +49,7 @@ spring:
       kafka:
         binder:
           brokers: localhost:9092
+          enable-observation: true
         bindings:
           orderCreated-in-0:
             consumer:
@@ -68,6 +69,13 @@ spring:
         enabled: false
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0 # default value 0.1
+  zipkin:
+    tracing:
+      endpoint: "http://localhost:9411/api/v2/spans"
+
   endpoints:
     web:
       exposure:
