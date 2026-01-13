@@ -14,11 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProductRegister {
+public class ProductWriter {
 
     private final ProductJpaRepository productJpaRepository;
 
-    @Transactional
     public ProductResponse register(RegisterProduct request) {
         ProductEntity product = new ProductEntity(
                 request.productId(),
@@ -28,12 +27,12 @@ public class ProductRegister {
         );
 
         productJpaRepository.save(product);
-
         return ProductResponse.from(product);
     }
 
     @Transactional
     public void decreaseStock(String productId, int qty) {
+        // DLQ 테스트용 폭탄 로직
         if ("BOMB".equals(productId)) {
             log.error("💣 Product Service: 으악! 폭탄이다! (DLQ 테스트)");
             throw new RuntimeException("Product Service Error Triggered!");
@@ -41,6 +40,7 @@ public class ProductRegister {
 
         ProductEntity product = productJpaRepository.findByProductId(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND, "Product not found: " + productId));
+
         product.decreaseStock(qty);
 
         log.info("Stock decreased for {}. Remaining: {}", productId, product.getStock());
@@ -50,6 +50,7 @@ public class ProductRegister {
     public void increaseStock(String productId, int qty) {
         ProductEntity product = productJpaRepository.findByProductId(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND, "Product not found: " + productId));
+
         product.increaseStock(qty);
 
         log.info("Stock increased for {}. Remaining: {}", productId, product.getStock());

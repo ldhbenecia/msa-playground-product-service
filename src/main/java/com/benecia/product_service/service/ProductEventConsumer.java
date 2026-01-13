@@ -7,7 +7,6 @@ import com.benecia.product_service.event.StockFailed;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -15,31 +14,30 @@ import org.springframework.data.redis.core.RedisTemplate;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class OrderEventConsumer {
+public class ProductEventConsumer {
 
-    private final ProductRegister productRegister;
-    private final StreamBridge streamBridge;
+    private final ProductService productService;
+    private final ProductEventPublisher productEventPublisher;
     private final RedisTemplate<String, Object> redisTemplate;
+
+    private void evictCache(String productId) {
+        String cacheKey = "product::" + productId;
+        redisTemplate.delete(cacheKey);
+        log.info("🧹 Cache Evicted for: {}", cacheKey);
+    }
 
     @Bean
     public Consumer<OrderCreated> orderCreated() {
         return orderDto -> {
-            log.info("Received order-created event: {}", orderDto);
+            log.info("📨 Received 'order-created': {}", orderDto.orderId());
 
             try {
-                productRegister.decreaseStock(orderDto.productId(), orderDto.qty());
-                log.info("Stock decreased successfully for orderId: {}", orderDto.orderId());
-
-                // Redis 캐시 삭제 (Cache Eviction)
-                // 재고가 바뀌었으니, Redis에 저장된 옛날 정보("product::CAT-001")를 지움
-                // 그래야 다음 조회 때 DB에서 최신 재고(99개)를 새로 가져와서 캐싱함
-                String cacheKey = "product::" + orderDto.productId();
-                redisTemplate.delete(cacheKey);
-                log.info("🧹 Cache Evicted for: {}", cacheKey);
+                productService.decreaseStock(orderDto.productId(), orderDto.qty());
+                evictCache(orderDto.productId());
             } catch(AppException e) {
                 log.error("Failed to decrease stock: {}", e.getMessage());
                 StockFailed failedDto = new StockFailed(orderDto.orderId(), orderDto.userId(), e.getMessage());
-                streamBridge.send("stockFailed-out-0", failedDto);
+                productEventPublisher.publishStockFailed(failedDto);
             }
         };
     }
@@ -47,13 +45,10 @@ public class OrderEventConsumer {
     @Bean
     public Consumer<OrderCancelled> orderCancelled() {
         return cancelledDto -> {
-            log.info("Received order-cancelled. Restoring stock for productId: {}", cancelledDto.productId());
+            log.info("📨 Received 'order-cancelled': {}", cancelledDto.orderId());
             try {
-                productRegister.increaseStock(cancelledDto.productId(), cancelledDto.qty());
-
-                String cacheKey = "product::" + cancelledDto.productId();
-                redisTemplate.delete(cacheKey);
-                log.info("🧹 Cache Evicted (Restored) for: {}", cacheKey);
+                productService.increaseStock(cancelledDto.productId(), cancelledDto.qty());
+                evictCache(cancelledDto.productId());
             } catch (Exception e) {
                 // 이미 롤백됐거나 상품이 없는 경우 등. 로그만 남김.
                 log.warn("Failed to restore stock (might be already handled): {}", e.getMessage());
