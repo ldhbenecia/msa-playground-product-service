@@ -13,7 +13,7 @@ on:
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/product-service
   MANIFESTS_REPO: ldhbenecia/ldh-infra-lab-manifests
-  VALUES_PATH: apps/local/product-service/values.yaml
+  VALUES_PATH: apps/msa/product-service/values.yaml
 
 jobs:
   build-and-push:
