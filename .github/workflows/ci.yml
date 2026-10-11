@@ -10,6 +10,12 @@ on:
       - '.github/workflows/ci.yml'
   workflow_dispatch:
 
+# 같은 브랜치에 새 커밋이 오면 진행 중인 옛 실행을 취소함
+# 안 그러면 늦게 끝난 옛 빌드가 매니페스트 태그를 옛 커밋으로 덮어씀
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/product-service
   MANIFESTS_REPO: ldhbenecia/ldh-infra-lab-manifests
@@ -18,7 +24,8 @@ env:
 jobs:
   build-and-push:
     name: Build and Push Image
-    runs-on: ubuntu-latest
+    # 노드가 전부 arm64. amd64 러너에서 QEMU 로 arm64 를 만들면 Gradle 이 몇 배 느려짐
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write          # GHCR push 권한
@@ -45,7 +52,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ steps.sha.outputs.SHORT_SHA }}
           cache-from: type=gha
@@ -63,10 +70,9 @@ jobs:
           token: ${{ secrets.MANIFESTS_TOKEN }}
           path: manifests
 
-      - name: Install yq
-        run: |
-          sudo wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
-          sudo chmod +x /usr/bin/yq
+      # 러너에 기본 설치돼 있음. 없으면 여기서 바로 실패함
+      - name: Check yq
+        run: yq --version
 
       - name: Update image tag
         run: |
